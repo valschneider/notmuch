@@ -4,7 +4,28 @@
 import sys
 import os
 
-extensions = [ 'sphinx.ext.autodoc' ]
+location = os.path.dirname(__file__)
+bindings_path =  os.path.join(location, '..', 'bindings', 'python-cffi','notmuch2')
+exclude_patterns = ['_build']
+
+# read generated config
+for pathdir in ['.', '..']:
+    conf_file = os.path.join(location,pathdir,'sphinx.config')
+    if os.path.exists(conf_file):
+        with open(conf_file,'r') as infile:
+            exec(''.join(infile.readlines()))
+
+if tags.has("AUTOAPI") or os.environ.get('READTHEDOCS') == 'True':
+    extensions = [ 'autoapi.extension' ]
+    autoapi_dirs = [ bindings_path ]
+    autoapi_add_toctree_entry = False
+    exclude_patterns.append('python-autodoc.rst')
+elif tags.has('WITH_PYTHON'):
+    extensions = [ 'sphinx.ext.autodoc' ]
+    sys.path.insert(0, bindings_path)
+    exclude_patterns.append('python-autoapi.rst')
+else:
+    exclude_patterns.append('python-autodoc.rst', 'python-autoapi.rst')
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -16,30 +37,14 @@ master_doc = 'index'
 project = u'notmuch'
 copyright = u'2009-2020, Carl Worth and many others'
 
-location = os.path.dirname(__file__)
-
 for pathdir in ['.', '..']:
     version_file = os.path.join(location,pathdir,'version')
     if os.path.exists(version_file):
         with open(version_file,'r') as infile:
             version=infile.read().replace('\n','')
 
-# for autodoc
-sys.path.insert(0, os.path.join(location, '..', 'bindings', 'python-cffi', 'notmuch2'))
-
-# read generated config
-for pathdir in ['.', '..']:
-    conf_file = os.path.join(location,pathdir,'sphinx.config')
-    if os.path.exists(conf_file):
-        with open(conf_file,'r') as infile:
-            exec(''.join(infile.readlines()))
-
 # The full version, including alpha/beta/rc tags.
 release = version
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-exclude_patterns = ['_build']
 
 if tags.has('WITH_EMACS'):
     # Hacky reimplementation of include to workaround limitations of
@@ -54,9 +59,6 @@ else:
     # don't build the notmuch-emacs docs, as they need emacs to generate
     # the docstring include files
     exclude_patterns.append('notmuch-emacs.rst')
-
-if not tags.has('WITH_PYTHON'):
-    exclude_patterns.append('python-bindings.rst')
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

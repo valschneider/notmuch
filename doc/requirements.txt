@@ -1,0 +1,2 @@
+# for readthedocs, or other standalone builds of the docs.
+sphinx-autoapi

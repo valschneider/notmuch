@@ -26,7 +26,8 @@ Contents:
    man7/notmuch-search-terms
    man1/notmuch-show
    man1/notmuch-tag
-   python-bindings
+   python-autodoc
+   python-autoapi
 
 Indices and tables
 ==================
