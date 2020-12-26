@@ -167,6 +167,10 @@ _choose_database_path (const char *config_path,
 	return status;
     }
 
+    if (! *database_path) {
+       *database_path = getenv ("NOTMUCH_DATABASE");
+    }
+
     if (! *database_path && *key_file)
 	*database_path = g_key_file_get_value (*key_file, "database", "path", NULL);
 
