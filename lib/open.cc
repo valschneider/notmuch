@@ -176,10 +176,12 @@ _db_dir_exists (const char *database_path, char **message)
 }
 
 static notmuch_status_t
-_choose_database_path (const char *config_path,
+_choose_database_path (void * ctx,
+                       const char *config_path,
 		       const char *profile,
 		       GKeyFile **key_file,
 		       const char **database_path,
+		       bool *split,
 		       char **message)
 {
     notmuch_status_t status;
@@ -196,6 +198,11 @@ _choose_database_path (const char *config_path,
 
     if (! *database_path && *key_file)
 	*database_path = g_key_file_get_value (*key_file, "database", "path", NULL);
+
+    if (! *database_path) {
+	*database_path = _xdg_dir (ctx, "XDG_DATA_HOME", ".local/share", profile);
+	*split = true;
+    }
 
     if (*database_path == NULL) {
 	*message = strdup ("Error: Cannot open a database for a NULL path.\n");
@@ -446,6 +453,7 @@ notmuch_database_open_with_config (const char *database_path,
     notmuch_database_t *notmuch = NULL;
     char *message = NULL;
     GKeyFile *key_file = NULL;
+    bool split = false;
 
     _init_libs ();
 
@@ -455,7 +463,9 @@ notmuch_database_open_with_config (const char *database_path,
 	goto DONE;
     }
 
-    if ((status = _choose_database_path (config_path, profile, &key_file, &database_path, &message)))
+    if ((status = _choose_database_path (local, config_path, profile,
+					 &key_file, &database_path, &split,
+					 &message)))
 	goto DONE;
 
     status = _db_dir_exists (database_path, &message);
@@ -540,7 +550,9 @@ notmuch_database_create_with_config (const char *database_path,
 	goto DONE;
     }
 
-    if ((status = _choose_database_path (config_path, profile, &key_file, &database_path, &message)))
+    if ((status = _choose_database_path (local, config_path, profile,
+					 &key_file, &database_path, &split,
+					 &message)))
 	goto DONE;
 
     status = _db_dir_exists (database_path, &message);
