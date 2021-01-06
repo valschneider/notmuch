@@ -1077,9 +1077,9 @@ the same as for the function notmuch-tree."
   (setq notmuch-show-process-crypto notmuch-crypto-process-mime)
   (erase-buffer)
   (goto-char (point-min))
-  (let* ((search-args (concat basic-query
-			      (and query-context
-				   (concat " and (" query-context ")"))))
+  (let* ((search-args (if query-context
+			  (concat "(" basic-query ") and (" query-context ")")
+			basic-query))
 	 (message-arg (if unthreaded "--unthreaded" "--entire-thread")))
     (when (equal (car (process-lines notmuch-command "count" search-args)) "0")
       (setq search-args basic-query))
