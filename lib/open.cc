@@ -153,6 +153,29 @@ DONE:
 }
 
 static notmuch_status_t
+_db_dir_exists (const char *database_path, char **message)
+{
+    struct stat st;
+    int err;
+
+    err = stat (database_path, &st);
+    if (err) {
+	IGNORE_RESULT (asprintf (message, "Error: Cannot open database at %s: %s.\n",
+				 database_path, strerror (errno)));
+	return NOTMUCH_STATUS_FILE_ERROR;
+    }
+
+    if (! S_ISDIR (st.st_mode)) {
+	IGNORE_RESULT (asprintf (message, "Error: Cannot open database at %s: "
+				 "Not a directory.\n",
+				 database_path));
+	return NOTMUCH_STATUS_FILE_ERROR;
+    }
+
+    return NOTMUCH_STATUS_SUCCESS;
+}
+
+static notmuch_status_t
 _choose_database_path (const char *config_path,
 		       const char *profile,
 		       GKeyFile **key_file,
@@ -239,11 +262,8 @@ notmuch_database_open_with_config (const char *database_path,
     notmuch_database_t *notmuch = NULL;
     char *notmuch_path, *incompat_features;
     char *message = NULL;
-    struct stat st;
-    int err;
     unsigned int version;
     GKeyFile *key_file = NULL;
-    static int initialized = 0;
 
     _init_libs ();
 
@@ -258,19 +278,19 @@ notmuch_database_open_with_config (const char *database_path,
 
     _set_database_path (notmuch, database_path);
 
+    status = _db_dir_exists (database_path, &message);
+    if (status)
+        goto DONE;
+
     if (! (notmuch_path = talloc_asprintf (local, "%s/%s", database_path, ".notmuch"))) {
 	message = strdup ("Out of memory\n");
 	status = NOTMUCH_STATUS_OUT_OF_MEMORY;
 	goto DONE;
     }
 
-    err = stat (notmuch_path, &st);
-    if (err) {
-	IGNORE_RESULT (asprintf (&message, "Error opening database at %s: %s\n",
-				 notmuch_path, strerror (errno)));
-	status = NOTMUCH_STATUS_FILE_ERROR;
-	goto DONE;
-    }
+    status = _db_dir_exists (notmuch_path, &message);
+    if (status)
+        goto DONE;
 
     if (! (notmuch->xapian_path = talloc_asprintf (local, "%s/%s", notmuch_path, "xapian"))) {
 	message = strdup ("Out of memory\n");
@@ -454,34 +474,34 @@ notmuch_database_create_with_config (const char *database_path,
     char *notmuch_path = NULL;
     char *message = NULL;
     GKeyFile *key_file = NULL;
-    struct stat st;
+    void *local = talloc_new (NULL);
     int err;
+
+    _init_libs ();
+
+    notmuch = _alloc_notmuch ();
+    if (!notmuch) {
+	status = NOTMUCH_STATUS_OUT_OF_MEMORY;
+	goto DONE;
+    }
 
     if ((status = _choose_database_path (config_path, profile, &key_file, &database_path, &message)))
 	goto DONE;
 
-    err = stat (database_path, &st);
-    if (err) {
-	IGNORE_RESULT (asprintf (&message, "Error: Cannot create database at %s: %s.\n",
-				 database_path, strerror (errno)));
-	status = NOTMUCH_STATUS_FILE_ERROR;
-	goto DONE;
-    }
+    status = _db_dir_exists (database_path, &message);
+    if (status)
+        goto DONE;
 
-    if (! S_ISDIR (st.st_mode)) {
-	IGNORE_RESULT (asprintf (&message, "Error: Cannot create database at %s: "
-				 "Not a directory.\n",
-				 database_path));
-	status = NOTMUCH_STATUS_FILE_ERROR;
-	goto DONE;
-    }
+    _set_database_path (notmuch, database_path);
 
-    notmuch_path = talloc_asprintf (NULL, "%s/%s", database_path, ".notmuch");
+    notmuch_path = talloc_asprintf (local, "%s/%s", database_path, ".notmuch");
 
     err = mkdir (notmuch_path, 0755);
     if (err) {
 	if (errno == EEXIST) {
 	    status = NOTMUCH_STATUS_DATABASE_EXISTS;
+	    talloc_free (notmuch);
+	    notmuch = NULL;
 	} else {
 	    IGNORE_RESULT (asprintf (&message, "Error: Cannot create directory %s: %s.\n",
 				     notmuch_path, strerror (errno)));
@@ -512,8 +532,7 @@ notmuch_database_create_with_config (const char *database_path,
     }
 
   DONE:
-    if (notmuch_path)
-	talloc_free (notmuch_path);
+    talloc_free(local);
 
     if (message) {
 	if (status_string)
