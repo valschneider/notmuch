@@ -250,8 +250,8 @@ _trial_open (const char *xapian_path, char **message_ptr)
     return NOTMUCH_STATUS_SUCCESS;
 }
 
-static notmuch_status_t
-_choose_xapian_path (void *ctx, const char *database_path, const char **xapian_path, char **message_ptr){
+notmuch_status_t
+_notmuch_choose_xapian_path (void *ctx, const char *database_path, const char **xapian_path, char **message_ptr){
     notmuch_status_t status;
     const char *trial_path, *notmuch_path;
 
@@ -474,7 +474,7 @@ notmuch_database_open_with_config (const char *database_path,
 
     _set_database_path (notmuch, database_path);
 
-    status = _choose_xapian_path (local, database_path, &notmuch->xapian_path, &message);
+    status = _notmuch_choose_xapian_path (local, database_path, &notmuch->xapian_path, &message);
     if (status)
 	goto DONE;
 
