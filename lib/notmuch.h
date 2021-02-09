@@ -442,6 +442,15 @@ notmuch_database_open_with_config (const char *database_path,
 				   const char *profile,
 				   notmuch_database_t **database,
 				   char **error_message);
+
+
+notmuch_status_t
+notmuch_database_load_config (const char *database_path,
+			      const char *config_path,
+			      const char *profile,
+			      notmuch_database_t **database,
+			      char **error_message);
+
 /**
  * Create a new notmuch database located at 'database_path', using
  * configuration in 'config_path'.
