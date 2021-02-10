@@ -626,9 +626,6 @@ EOF
 
 
 test_begin_subtest "notmuch_database_get_config (ndlc)"
-echo NOTMUCH_CONFIG=$NOTMUCH_CONFIG
-echo NOTMUCH_PROFILE=$NOTMUCH_PROFILE
-echo HOME=$HOME
 cat c_head2 - c_tail <<'EOF' | test_C ${MAIL_DIR} %NULL% %NULL%
 {
    EXPECT0(notmuch_database_get_config (db, "test.key1", &val));
