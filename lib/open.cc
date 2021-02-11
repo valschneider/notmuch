@@ -183,27 +183,18 @@ _db_dir_exists (const char *database_path, char **message)
 
 static notmuch_status_t
 _choose_database_path (void * ctx,
-                       const char *config_path,
 		       const char *profile,
-		       GKeyFile **key_file,
+		       GKeyFile *key_file,
 		       const char **database_path,
 		       bool *split,
 		       char **message)
 {
-    notmuch_status_t status;
-
-    status =_load_key_file (config_path, profile, key_file);
-    if (status) {
-	*message = strdup ("Error: cannot load config file.\n");
-	return status;
-    }
-
     if (! *database_path) {
        *database_path = getenv ("NOTMUCH_DATABASE");
     }
 
-    if (! *database_path && *key_file)
-	*database_path = g_key_file_get_value (*key_file, "database", "path", NULL);
+    if (! *database_path && key_file)
+	*database_path = g_key_file_get_value (key_file, "database", "path", NULL);
 
     if (! *database_path) {
 	*database_path = _xdg_dir (ctx, "XDG_DATA_HOME", ".local/share", profile);
@@ -482,8 +473,14 @@ notmuch_database_open_with_config (const char *database_path,
 	goto DONE;
     }
 
-    if ((status = _choose_database_path (local, config_path, profile,
-					 &key_file, &database_path, &split,
+    status =_load_key_file (config_path, profile, &key_file);
+    if (status) {
+	message = strdup ("Error: cannot load config file.\n");
+	goto DONE;
+    }
+
+    if ((status = _choose_database_path (local, profile, key_file,
+					 &database_path, &split,
 					 &message)))
 	goto DONE;
 
@@ -569,9 +566,14 @@ notmuch_database_create_with_config (const char *database_path,
 	goto DONE;
     }
 
-    if ((status = _choose_database_path (local, config_path, profile,
-					 &key_file, &database_path, &split,
-					 &message)))
+    status =_load_key_file (config_path, profile, &key_file);
+    if (status) {
+	message = strdup ("Error: cannot load config file.\n");
+	goto DONE;
+    }
+
+    if ((status = _choose_database_path (local, profile, key_file,
+					 &database_path, &split, &message)))
 	goto DONE;
 
     status = _db_dir_exists (database_path, &message);
