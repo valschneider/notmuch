@@ -2475,6 +2475,8 @@ notmuch_config_list_move_to_next (notmuch_config_list_t *config_list);
 void
 notmuch_config_list_destroy (notmuch_config_list_t *config_list);
 
+notmuch_config_values_t *
+notmuch_database_get_config_values (notmuch_database_t *notmuch, const char *key_string);
 
 /**
  * Configuration keys known to libnotmuch
