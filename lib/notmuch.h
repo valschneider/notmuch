@@ -245,6 +245,7 @@ typedef struct _notmuch_directory notmuch_directory_t;
 typedef struct _notmuch_filenames notmuch_filenames_t;
 typedef struct _notmuch_config_list notmuch_config_list_t;
 typedef struct _notmuch_config_values notmuch_config_values_t;
+typedef struct _notmuch_config_pairs notmuch_config_pairs_t;
 typedef struct _notmuch_indexopts notmuch_indexopts_t;
 #endif /* __DOXYGEN__ */
 
@@ -2606,6 +2607,26 @@ notmuch_config_values_start (notmuch_config_values_t *values);
  */
 void
 notmuch_config_values_destroy (notmuch_config_values_t *values);
+
+
+notmuch_config_pairs_t *
+notmuch_config_get_pairs (notmuch_database_t *notmuch,
+			  const char *prefix);
+
+notmuch_bool_t
+notmuch_config_pairs_valid (notmuch_config_pairs_t *pairs);
+
+void
+notmuch_config_pairs_move_to_next (notmuch_config_pairs_t *pairs);
+
+const char *
+notmuch_config_pairs_key (notmuch_config_pairs_t *pairs);
+
+const char *
+notmuch_config_pairs_value (notmuch_config_pairs_t *pairs);
+
+void
+notmuch_config_pairs_destroy (notmuch_config_pairs_t *pairs);
 
 /**
  * get a configuration value from an open database as Boolean
