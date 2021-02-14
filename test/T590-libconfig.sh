@@ -397,7 +397,7 @@ MAIL_DIR/.notmuch/backups
 inbox;unread
 NULL
 true
-NULL
+USERNAME@FQDN
 NULL
 USER_FULL_NAME
 == stderr ==
@@ -742,7 +742,7 @@ MAIL_DIR/.notmuch/backups
 inbox;unread
 NULL
 true
-NULL
+USERNAME@FQDN
 NULL
 USER_FULL_NAME
 == stderr ==
