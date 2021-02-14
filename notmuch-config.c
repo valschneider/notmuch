@@ -141,69 +141,6 @@ notmuch_config_destructor (notmuch_config_t *config)
     return 0;
 }
 
-static char *
-get_name_from_passwd_file (void *ctx)
-{
-    long pw_buf_size;
-    char *pw_buf;
-    struct passwd passwd, *ignored;
-    char *name;
-    int e;
-
-    pw_buf_size = sysconf (_SC_GETPW_R_SIZE_MAX);
-    if (pw_buf_size == -1) pw_buf_size = 64;
-    pw_buf = talloc_size (ctx, pw_buf_size);
-
-    while ((e = getpwuid_r (getuid (), &passwd, pw_buf,
-			    pw_buf_size, &ignored)) == ERANGE) {
-	pw_buf_size = pw_buf_size * 2;
-	pw_buf = talloc_zero_size (ctx, pw_buf_size);
-    }
-
-    if (e == 0) {
-	char *comma = strchr (passwd.pw_gecos, ',');
-	if (comma)
-	    name = talloc_strndup (ctx, passwd.pw_gecos,
-				   comma - passwd.pw_gecos);
-	else
-	    name = talloc_strdup (ctx, passwd.pw_gecos);
-    } else {
-	name = talloc_strdup (ctx, "");
-    }
-
-    talloc_free (pw_buf);
-
-    return name;
-}
-
-static char *
-get_username_from_passwd_file (void *ctx)
-{
-    long pw_buf_size;
-    char *pw_buf;
-    struct passwd passwd, *ignored;
-    char *name;
-    int e;
-
-    pw_buf_size = sysconf (_SC_GETPW_R_SIZE_MAX);
-    if (pw_buf_size == -1) pw_buf_size = 64;
-    pw_buf = talloc_zero_size (ctx, pw_buf_size);
-
-    while ((e = getpwuid_r (getuid (), &passwd, pw_buf,
-			    pw_buf_size, &ignored)) == ERANGE) {
-	pw_buf_size = pw_buf_size * 2;
-	pw_buf = talloc_zero_size (ctx, pw_buf_size);
-    }
-
-    if (e == 0)
-	name = talloc_strdup (ctx, passwd.pw_name);
-    else
-	name = talloc_strdup (ctx, "");
-
-    talloc_free (pw_buf);
-
-    return name;
-}
 
 static bool
 get_config_from_file (notmuch_config_t *config, bool create_new)
@@ -322,12 +259,10 @@ get_config_from_file (notmuch_config_t *config, bool create_new)
  *	user in editing the file directly.
  */
 notmuch_config_t *
-notmuch_config_open (void *ctx,
+notmuch_config_open (notmuch_database_t *notmuch,
 		     const char *filename,
 		     notmuch_command_mode_t config_mode)
 {
-    GError *error = NULL;
-    size_t tmp;
     char *notmuch_config_env = NULL;
     int file_had_database_group;
     int file_had_new_group;
@@ -336,7 +271,7 @@ notmuch_config_open (void *ctx,
     int file_had_search_group;
     int file_had_crypto_group;
 
-    notmuch_config_t *config = talloc_zero (ctx, notmuch_config_t);
+    notmuch_config_t *config = talloc_zero (notmuch, notmuch_config_t);
 
     if (config == NULL) {
 	fprintf (stderr, "Out of memory.\n");
@@ -368,15 +303,10 @@ notmuch_config_open (void *ctx,
 	}
     }
 
+
     /* Whenever we know of configuration sections that don't appear in
      * the configuration file, we add some comments to help the user
      * understand what can be done.
-     *
-     * It would be convenient to just add those comments now, but
-     * apparently g_key_file will clear any comments when keys are
-     * added later that create the groups. So we have to check for the
-     * groups now, but add the comments only after setting all of our
-     * values.
      */
     file_had_database_group = g_key_file_has_group (config->key_file,
 						    "database");
@@ -386,87 +316,6 @@ notmuch_config_open (void *ctx,
     file_had_search_group = g_key_file_has_group (config->key_file, "search");
     file_had_crypto_group = g_key_file_has_group (config->key_file, "crypto");
 
-    if (notmuch_config_get_database_path (config) == NULL) {
-	char *path = getenv ("MAILDIR");
-	if (path)
-	    path = talloc_strdup (config, path);
-	else
-	    path = talloc_asprintf (config, "%s/mail",
-				    getenv ("HOME"));
-	notmuch_config_set_database_path (config, path);
-	talloc_free (path);
-    }
-
-    if (notmuch_config_get_user_name (config) == NULL) {
-	char *name = getenv ("NAME");
-	if (name)
-	    name = talloc_strdup (config, name);
-	else
-	    name = get_name_from_passwd_file (config);
-	notmuch_config_set_user_name (config, name);
-	talloc_free (name);
-    }
-
-    if (notmuch_config_get_user_primary_email (config) == NULL) {
-	char *email = getenv ("EMAIL");
-	if (email) {
-	    notmuch_config_set_user_primary_email (config, email);
-	} else {
-	    char hostname[256];
-	    struct hostent *hostent;
-	    const char *domainname;
-
-	    char *username = get_username_from_passwd_file (config);
-
-	    gethostname (hostname, 256);
-	    hostname[255] = '\0';
-
-	    hostent = gethostbyname (hostname);
-	    if (hostent && (domainname = strchr (hostent->h_name, '.')))
-		domainname += 1;
-	    else
-		domainname = "(none)";
-
-	    email = talloc_asprintf (config, "%s@%s.%s",
-				     username, hostname, domainname);
-
-	    notmuch_config_set_user_primary_email (config, email);
-
-	    talloc_free (username);
-	    talloc_free (email);
-	}
-    }
-
-    if (notmuch_config_get_new_tags (config, &tmp) == NULL) {
-	const char *tags[] = { "unread", "inbox" };
-	notmuch_config_set_new_tags (config, tags, 2);
-    }
-
-    if (notmuch_config_get_new_ignore (config, &tmp) == NULL) {
-	notmuch_config_set_new_ignore (config, NULL, 0);
-    }
-
-    if (notmuch_config_get_search_exclude_tags (config, &tmp) == NULL) {
-	if (config->is_new) {
-	    const char *tags[] = { "deleted", "spam" };
-	    notmuch_config_set_search_exclude_tags (config, tags, 2);
-	} else {
-	    notmuch_config_set_search_exclude_tags (config, NULL, 0);
-	}
-    }
-
-    error = NULL;
-    config->maildir_synchronize_flags =
-	g_key_file_get_boolean (config->key_file,
-				"maildir", "synchronize_flags", &error);
-    if (error) {
-	notmuch_config_set_maildir_synchronize_flags (config, true);
-	g_error_free (error);
-    }
-
-    /* Whenever we know of configuration sections that don't appear in
-     * the configuration file, we add some comments to help the user
-     * understand what can be done. */
     if (config->is_new)
 	g_key_file_set_comment (config->key_file, NULL, NULL,
 				toplevel_config_comment, NULL);
