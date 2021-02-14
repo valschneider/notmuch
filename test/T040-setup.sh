@@ -20,19 +20,26 @@ foo bar
 baz
 EOF
 
-output=$(notmuch --config=new-notmuch-config config list | notmuch_built_with_sanitize)
-test_expect_equal "$output" "\
-database.path=/path/to/maildir
-user.name=Test Suite
-user.primary_email=test.suite@example.com
-user.other_email=another.suite@example.com;
-new.tags=foo;bar;
-new.ignore=
-search.exclude_tags=baz;
-maildir.synchronize_flags=true
+cat <<EOF > EXPECTED
 built_with.compact=something
 built_with.field_processor=something
-built_with.retry_lock=something"
+built_with.retry_lock=something
+database.mail_root=/path/to/maildir
+database.path=/path/to/maildir
+maildir.synchronize_flags=true
+new.ignore=
+new.tags=foo;bar;
+search.exclude_tags=baz;
+user.name=Test Suite
+user.other_email=another.suite@example.com;
+user.primary_email=test.suite@example.com
+EOF
+
+notmuch --config=new-notmuch-config config list | notmuch_built_with_sanitize > OUTPUT
+
+test_expect_equal_file EXPECTED OUTPUT
+
+
 
 test_begin_subtest "notmuch with a config but without a database suggests notmuch new"
 notmuch 2>&1 | notmuch_dir_sanitize > OUTPUT
