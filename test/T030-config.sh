@@ -121,5 +121,24 @@ notmuch config set database.path ${db_path}
 test_expect_equal "$(notmuch config get database.path)" \
 		  "${db_path}"
 
+test_begin_subtest "Add config to database"
+notmuch new
+key=g${RANDOM}.m${RANDOM}
+value=${RANDOM}
+notmuch config --database set ${key} ${value}
+notmuch dump --include=config > OUTPUT
+cat <<EOF > EXPECTED
+#notmuch-dump batch-tag:3 config
+#@ ${key} ${value}
+EOF
+test_expect_equal_file EXPECTED OUTPUT
+
+test_begin_subtest "Roundtrip config to/from database"
+notmuch new
+key=g${RANDOM}.m${RANDOM}
+value=${RANDOM}
+notmuch config --database set ${key} ${value}
+output=$(notmuch config get ${key})
+test_expect_equal "${output}" "${value}"
 
 test_done

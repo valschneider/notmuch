@@ -543,16 +543,15 @@ validate_field_name (const char *str)
 
 typedef struct config_key {
     const char *name;
-    bool in_db;
     bool prefix;
     bool (*validate)(const char *);
 } config_key_info_t;
 
 static struct config_key
     config_key_table[] = {
-    { "index.decrypt",   true,   false,  NULL },
-    { "index.header.",   true,   true,   validate_field_name },
-    { "query.",          true,   true,   NULL },
+    { "index.decrypt",   false,  NULL },
+    { "index.header.",   true,   validate_field_name },
+    { "query.",          true,   NULL },
 };
 
 static config_key_info_t *
@@ -614,7 +613,9 @@ _set_db_config (notmuch_database_t *notmuch, const char *key, int argc, char **a
 }
 
 static int
-notmuch_config_command_set (notmuch_config_t *config, notmuch_database_t *notmuch, char *item, int argc, char *argv[])
+notmuch_config_command_set (notmuch_config_t *config, notmuch_database_t *notmuch,
+			    char *item, bool update_db,
+			    int argc, char *argv[])
 {
     char *group, *key;
     config_key_info_t *key_info;
@@ -628,7 +629,7 @@ notmuch_config_command_set (notmuch_config_t *config, notmuch_database_t *notmuc
     if (key_info && key_info->validate && (! key_info->validate (item)))
 	return 1;
 
-    if (key_info && key_info->in_db) {
+    if (update_db) {
 	return _set_db_config (notmuch, item, argc, argv);
     }
 
@@ -695,10 +696,19 @@ notmuch_config_command (notmuch_config_t *config, notmuch_database_t *notmuch, i
 {
     int ret;
     int opt_index;
+    bool update_database;
 
-    opt_index = notmuch_minimal_options ("config", argc, argv);
+    notmuch_opt_desc_t options[] = {
+	{ .opt_bool = &update_database, .name = "database" },
+	{ .opt_inherit = notmuch_shared_options },
+	{ }
+    };
+
+    opt_index = parse_arguments (argc, argv, options, 1);
     if (opt_index < 0)
 	return EXIT_FAILURE;
+
+    notmuch_process_shared_options (argv[0]);
 
     if (notmuch_requested_db_uuid)
 	fprintf (stderr, "Warning: ignoring --uuid=%s\n",
@@ -726,7 +736,7 @@ notmuch_config_command (notmuch_config_t *config, notmuch_database_t *notmuch, i
 		     "one argument.\n");
 	    return EXIT_FAILURE;
 	}
-	ret = notmuch_config_command_set (config, notmuch, argv[1], argc - 2, argv + 2);
+	ret = notmuch_config_command_set (config, notmuch, argv[1], update_database, argc - 2, argv + 2);
     } else if (strcmp (argv[0], "list") == 0) {
 	ret = notmuch_config_command_list (notmuch);
     } else {
