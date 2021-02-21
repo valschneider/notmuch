@@ -2647,6 +2647,15 @@ notmuch_status_t
 notmuch_config_get_bool (notmuch_database_t *notmuch,
 			 notmuch_config_key_t key,
 			 notmuch_bool_t *val);
+
+/**
+ * return the path of the config file loaded, if any
+ *
+ * @retval NULL if no config file was loaded
+ */
+const char *
+notmuch_config_path (notmuch_database_t *notmuch);
+
 /**
  * get the current default indexing options for a given database.
  *

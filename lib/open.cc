@@ -113,12 +113,13 @@ _choose_dir (notmuch_database_t *notmuch,
 }
 
 static notmuch_status_t
-_load_key_file (const char *path,
+_load_key_file (const char **config_path,
 		const char *profile,
 		GKeyFile **key_file)
 {
     notmuch_status_t status = NOTMUCH_STATUS_SUCCESS;
     void *local = talloc_new (NULL);
+    const char *path = *config_path;
 
     if (path && EMPTY_STRING (path))
 	goto DONE;
@@ -155,6 +156,9 @@ _load_key_file (const char *path,
 
 DONE:
     talloc_free (local);
+    if (path)
+	*config_path = path;
+
     return status;
 }
 
@@ -222,6 +226,7 @@ notmuch_database_t * _alloc_notmuch() {
     notmuch->exception_reported = false;
     notmuch->status_string = NULL;
     notmuch->writable_xapian_db = NULL;
+    notmuch->config_path = NULL;
     notmuch->atomic_nesting = 0;
     notmuch->view = 1;
     return notmuch;
@@ -473,7 +478,7 @@ notmuch_database_open_with_config (const char *database_path,
 	goto DONE;
     }
 
-    status =_load_key_file (config_path, profile, &key_file);
+    status =_load_key_file (&config_path, profile, &key_file);
     if (status) {
 	message = strdup ("Error: cannot load config file.\n");
 	goto DONE;
@@ -566,7 +571,7 @@ notmuch_database_create_with_config (const char *database_path,
 	goto DONE;
     }
 
-    status =_load_key_file (config_path, profile, &key_file);
+    status =_load_key_file (&config_path, profile, &key_file);
     if (status) {
 	message = strdup ("Error: cannot load config file.\n");
 	goto DONE;
@@ -753,7 +758,7 @@ notmuch_database_load_config (const char *database_path,
 	goto DONE;
     }
 
-    status =_load_key_file (config_path, profile, &key_file);
+    status =_load_key_file (&config_path, profile, &key_file);
     switch (status) {
     case NOTMUCH_STATUS_SUCCESS:
     case NOTMUCH_STATUS_NO_CONFIG:
