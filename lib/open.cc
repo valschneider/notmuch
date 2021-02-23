@@ -206,8 +206,8 @@ _choose_database_path (void * ctx,
     }
 
     if (*database_path == NULL) {
-	*message = strdup ("Error: Cannot open a database for a NULL path.\n");
-	return NOTMUCH_STATUS_NULL_POINTER;
+	*message = strdup ("Error: could not locate database.\n");
+	return NOTMUCH_STATUS_NO_DATABASE;
     }
 
     if (*database_path[0] != '/') {
@@ -772,10 +772,9 @@ notmuch_database_load_config (const char *database_path,
     status = _choose_database_path (local, profile, key_file,
 				    &database_path, &split, &message);
     switch (status) {
-	/* weirdly NULL_POINTER is what is returned if we fail to find
-	 * a database */
-    case NOTMUCH_STATUS_NULL_POINTER:
+    case NOTMUCH_STATUS_NO_DATABASE:
     case NOTMUCH_STATUS_SUCCESS:
+	status2 = status;
 	break;
     default:
 	goto DONE;
