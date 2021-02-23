@@ -304,6 +304,8 @@ notmuch_status_to_string (notmuch_status_t status)
 	return "Unknown crypto protocol";
     case NOTMUCH_STATUS_NO_CONFIG:
 	return "No configuration file found";
+    case NOTMUCH_STATUS_NO_DATABASE:
+	return "No configuration file found";
     case NOTMUCH_STATUS_DATABASE_EXISTS:
 	return "Database exists, not recreated";
     default:
