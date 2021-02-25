@@ -215,7 +215,11 @@ EOF
 
    test_expect_equal_file EXPECTED OUTPUT
 
-    restore_config
+   test_begin_subtest "Set config value ($config)"
+   notmuch config set foo.string "this is a string value"
+   test_expect_equal "$(notmuch config get foo.string)" "this is a string value"
+
+   restore_config
 done
 
 test_done

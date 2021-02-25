@@ -565,6 +565,9 @@ main (int argc, char *argv[])
     }
 
     if (command->mode & NOTMUCH_COMMAND_CONFIG_OPEN) {
+	if (! config_file_name)
+	    config_file_name = notmuch_config_path (notmuch);
+
 	config = notmuch_config_open (notmuch, config_file_name, command->mode);
 	if (! config) {
 	    ret = EXIT_FAILURE;
